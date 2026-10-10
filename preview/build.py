@@ -1,14 +1,7 @@
-"""把一份 Markdown 报告放进预览页，出 PNG / PDF；也是打印版式测试的入口。
-
-    py preview/build.py 报告.md --png out.png        # 截一张图，看版式
-    py preview/build.py 报告.md --pdf out.pdf        # 出一份 PDF
-    py preview/build.py 报告.md --png out.png --break indent   # 故意改坏，应当一眼看出不对
-    py preview/build.py --print-frontier              # 看看这台机器上找不找得到 Edge
-
-**为什么是「生成一个页面」而不是「打开页面再灌内容」。** 早先的预览工具是从
-ai-chat.html 里抠 <style> 拼一个新页面，测试则是往 ai-chat.html 的末尾注入探针脚本 ——
-注入点靠 `rfind('})();')` 找，主脚本改一次收尾就失配。现在页面上只有一个公开入口
-`window.__reportPreview.load(md, opts, breaks)`，谁都可以调，测试和人都走它。
+"""把 Markdown 报告放进预览页，出 PNG / PDF。也是版式测试的入口。
+py preview/build.py 报告.md --png out.png
+py preview/build.py 报告.md --png out.png --break indent
+py preview/build.py --print-frontier
 """
 import argparse
 import json

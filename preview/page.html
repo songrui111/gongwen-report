@@ -3,15 +3,11 @@
 <head>
 <meta charset="utf-8">
 <title>公文版式预览</title>
-<!-- 「纸」和「报告正文」分成两个文件：paper.css 管版式，report.js 管渲染和打标。
-     两个库（marked / DOMPurify）走 vendor/ 本地文件 —— 版式判据是量真页面，CDN 挂了
-     或者版本漂了，量出来的就不是这份代码印出来的东西。 -->
+<!-- 版式在 paper.css，渲染和打标在 report.js。
+     两个库走 vendor/ 本地文件：版式判据量的是真页面，CDN 挂了或版本漂了都不行。 -->
 <link rel="stylesheet" href="paper.css">
 <style>
-  /* 页面上的说明**不在这张纸上**：它在 .report-content 外面，所以打印时按
-     `body > *:not(.report-content)` 那条白名单被一起藏掉，不会印进公文里。
-     （2026-10-10 踩过的坑：面板上那行提示是 span，不在「要藏的东西」清单里，
-     于是真的印在了公文第一页顶部。） */
+  /* 说明不在纸上：它在 .report-content 外面，打印时按那条白名单一起藏掉。 */
   .hint {
     width: 210mm; margin: 0 auto 10px; color: #6b7280; font-size: 13px; line-height: 1.7;
   }
@@ -22,14 +18,12 @@
 <body>
 <div class="hint">
   空的纸。把一份 Markdown 报告放进来：<br>
-  <code>py preview/build.py 报告.md --png 报告.png</code> —— 看它按 GB/T 9704—2012
-  排出来的样子；<code>--pdf 报告.pdf</code> 出可打印的 PDF；
-  <code>--break indent</code>（或 sign / font / table / paper）故意改坏一处，
-  印出来应当看得出不对。
+  <code>py preview/build.py 报告.md --png 报告.png</code>
+  按 GB/T 9704—2012 排出来的样子；<code>--pdf 报告.pdf</code> 出可打印 PDF；
+  <code>--break indent</code>（或 sign / font / table / paper）故意改坏一处。
 </div>
-<!-- 落款 .doc-sign 会被 report.js 挂在 .report-content 底下，和 .rendered 平级 ——
-     这是**必须保住的结构**：字号和字族那对变量挂在 .report-content 上，落款作为
-     .rendered 的兄弟节点才继承得到。挪进 .rendered 里，纸面上会静默掉回 12pt 小四。 -->
+<!-- 落款 .doc-sign 必须是 .rendered 的兄弟节点，和它一起挂在 .report-content 底下。
+     字号和字族那对变量挂在 .report-content 上，挪进 .rendered 就继承不到，掉回 12pt。 -->
 <div class="report-content" id="reportContent">
   <div class="rendered" id="reportRendered"></div>
 </div>

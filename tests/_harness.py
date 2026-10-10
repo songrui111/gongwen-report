@@ -1,13 +1,7 @@
-"""测试共用的小工具：一个会计数的断言器、一份样本装载、一次子进程调用。
+"""测试共用工具：断言器、样本装载、子进程调用。不引 pytest。
 
-**不引 pytest。** 这一层要能在只装了标准库的机器上跑起来（纯逻辑那几套），
-需要第三方库的只有版式那一套 —— 依赖是按文件分的，不是按整套分的。这样一来
-「剪出来之后不需要装整个应用栈就能验」这件事本身，是被 `run_all.py` 每天跑出来的，
-而不是写在文档里的一句话。
-
-每个 test_*.py 的约定一样：模块里有个 `main()`，跑完返回 `(过不过, 「没验」清单)`，
-自己也能单独跑（`py tests/test_print.py`）。**清单非空 = 这一层没验，不是通过** ——
-退出码 2，和「验了没过」（1）分开。
+每个 test_*.py 约定：模块里有个 main()，返回 (过不过, 「没验」清单)。
+没验 ≠ 通过 —— 退出码 2 和 1 分开。
 """
 import os
 import subprocess
@@ -59,16 +53,10 @@ def load(name, t=None, why='仓库里没有这份 fixtures'):
 
 
 def run_cli(*args, env=None, timeout=300):
-    """跑一次真命令：`py report_check.py …`，把 stdout / stderr 分开拿回来。
+    """跑一次真命令。走子进程不 import —— 退出码和 stdout/stderr 分工是这一层要验的。
 
-    走真命令行而不是直接 import `gongwen.cli`：退出码、stdout 和 stderr 的分工
-    （`--print-system` 的内容走 stdout、`fmt:` 那行走 stderr）是这一层要验的东西，
-    直接调函数就绕过去了。
-
-    `env` 里给 `PYTHONIOENCODING` 可以改掉那个默认的 utf-8 —— 绝大多数调用不该改它
-    （Windows 控制台默认不是 UTF-8，报告里全是中文），但**正因为它是个默认值，有些
-    只在别的编码下才发作的毛病会被它盖住**，要验的时候得能把它掀开（见
-    test_assemble 最后那一节）。"""
+    PYTHONIOENCODING 默认 utf-8，env 里可以覆盖掉来验 GBK 场景。
+    """
     e = dict(os.environ)
     # PYTHONIOENCODING：Windows 上控制台默认不是 UTF-8，报告里全是中文
     e['PYTHONIOENCODING'] = 'utf-8'
