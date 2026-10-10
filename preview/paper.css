@@ -113,7 +113,12 @@ body {
   padding: 8px 14px; text-align: left;
 }
 .report-content .rendered th:last-child, .report-content .rendered td:last-child { border-right: none; }
-.report-content .rendered tr:last-child th, .report-content .rendered tr:last-child td { border-bottom: none; }
+/* 末行不画底线（表格自己有 2px 外框，再画一条会成双线）。
+   **必须写成 tbody tr:last-child td**：:last-child 只认「父元素的最后一个孩子」，而
+   marked 把表头单独放进 thead —— 表头那行于是也是 :last-child，被这条规则一起选中，
+   底线就没了。而且它的特异性（0,3,1）压得过下面 .th 的（0,2,1），写在后面也盖不回来。
+   少写一个 tbody，表现就是「每张表的第一行下面总是缺一条线」。 */
+.report-content .rendered tbody tr:last-child td { border-bottom: none; }
 .report-content .rendered th {
   background: #eef1f5; font-weight: 700; color: #222;
   border-bottom: 2px solid #555;
