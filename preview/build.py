@@ -47,11 +47,11 @@ def find_edge():
     return None
 
 
-def build_page(md, opts=None, breaks=None, probe=False, out=None):
+def build_page(md, opts=None, breaks=None, probe=False, out=None, capture=False):
     """→ 生成好的页面路径。
 
-    `probe=True` 时额外挂上探针（preview/probe.js），页面加载完会把量到的几何写进
-    `#xprobe`。人看的页面不带探针。
+    `probe=True` 挂上探针，量到的几何写进 `#xprobe`。
+    `capture=True` 藏掉页面顶部那行说明 —— 截图是给报告看的，说明不属于文档。
     """
     with open(PAGE, encoding='utf-8') as f:
         html = f.read()
@@ -61,6 +61,8 @@ def build_page(md, opts=None, breaks=None, probe=False, out=None):
     data = json.dumps(payload, ensure_ascii=False).replace('<', '\\u003c')
 
     driver = ['<script>window.__preview = ' + data + ';</script>']
+    if capture:
+        driver.append('<style>.hint{display:none !important}</style>')
     if probe:
         driver.append('<script src="probe.js"></script>')
     driver.append("""<script>
@@ -87,8 +89,11 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     return page
 
 
-def run_edge(page, mode='dom', dest=None, budget=25000, timeout=240):
-    """跑一次 headless Edge。`mode` 是 'dom'（抓页面）或 'png' / 'pdf'（落文件）。"""
+def run_edge(page, mode='dom', dest=None, budget=25000, timeout=240, size='900x1300'):
+    """跑一次 headless Edge。`mode` 是 'dom'（抓页面）或 'png' / 'pdf'（落文件）。
+
+    `size` 是 PNG 的窗口尺寸，默认 900×1300 —— 版心 210mm ≈ 794px，900 宽刚好一页。
+    """
     edge = find_edge()
     if not edge:
         raise RuntimeError('找不到 Edge（设 GWREPORT_EDGE 指到 msedge.exe）')
@@ -102,7 +107,7 @@ def run_edge(page, mode='dom', dest=None, budget=25000, timeout=240):
         if mode == 'dom':
             cmd += ['--dump-dom', url]
         elif mode == 'png':
-            cmd += ['--window-size=1400,2400', '--screenshot=' + dest, url]
+            cmd += ['--window-size=' + size, '--screenshot=' + dest, url]
         else:
             cmd += ['--no-pdf-header-footer', '--print-to-pdf=' + dest, url]
         return subprocess.run(cmd, capture_output=True, text=True,
@@ -129,6 +134,8 @@ def main():
     p.add_argument('--org', default='', help='发文机关署名')
     p.add_argument('--date', default='', help='成文日期 YYYY-MM-DD，默认本机当天')
     p.add_argument('--png', metavar='PATH', help='截一张图')
+    p.add_argument('--size', default='900x1300', metavar='WxH',
+                   help='--png 的窗口尺寸，默认 900x1300（一页 A4 版心宽 794px）')
     p.add_argument('--pdf', metavar='PATH', help='印一份 PDF')
     p.add_argument('--break', dest='breaks', action='append', default=[],
                    metavar='WHAT', help='故意改坏：indent / sign / font / table / paper')
@@ -145,14 +152,15 @@ def main():
             md = f.read()
 
     breaks = {k: True for k in a.breaks}
-    page = build_page(md, {'recipient': a.to, 'org': a.org, 'date': a.date}, breaks)
+    page = build_page(md, {'recipient': a.to, 'org': a.org, 'date': a.date}, breaks,
+                      capture=bool(a.png))
     print(f'页面 → {page}')
 
     if not find_edge():
         print('找不到 Edge，没出图（这一层没验，不是通过）')
         return 2
     if a.png:
-        r = run_edge(page, 'png', a.png)
+        r = run_edge(page, 'png', a.png, size=a.size)
         print(f'PNG → {a.png}' if os.path.exists(a.png)
               else f'没出 PNG（退出码 {r.returncode}）：{(r.stderr or "")[:200]}')
         return 0 if os.path.exists(a.png) else 1

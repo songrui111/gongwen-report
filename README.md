@@ -1,6 +1,10 @@
 # gongwen-report
 
-给公文和行业分析报告打分、生成的一套规矩。零第三方依赖、零密钥就能跑。
+给公文和行业分析报告打分、生成的一套规矩，附一个 Claude Skill。零第三方依赖、零密钥就能跑。
+
+![版式预览](docs/preview.png)
+
+上面这一页是 `fixtures/print_sample.md` 排出来的。标题居中、主送机关顶格、四级层次序数一律顶格、表格与正文统一 3 号字、表号表题写在表格上方、落款右空二字——这些都是判据在量的东西，不是画出来的。
 
 十六七条判据照着 GB/T 9704—2012 起出来，每条都能说清它拦的是什么：正文得是段落不是项目符号、层次序数怎么排、主送机关顶格、落款按 7.3.5.2 右空二字、表格和正文统一 3 号字、全文 8000–16000 字。
 
@@ -84,6 +88,16 @@ OpenAI 兼容接口，DeepSeek、硅基流动、本地 Ollama 都能接，设 `D
 
 没配密钥时明确报错退出，退出码 2，并把零密钥那条列在前面。没配密钥时不会发起任何请求，不是发出去等 401。上游出错、连不上、被中断，一律不落盘。密钥一律从环境变量读，不留任何默认值。
 
+## Claude Skill
+
+仓库自带一个 Claude Skill，在 [.claude/skills/gongwen-report/SKILL.md](.claude/skills/gongwen-report/SKILL.md)。用 Claude Code 打开这个目录就自动生效，不用安装。
+
+它管的是**流程**，不是判据：告诉模型先 `--print-system` 把规范取出来，照着写，写完必须跑 `report_check.py`，报红的逐条改到全绿；同时钉住几条纪律——不许为了过检放宽判据、不许在没有资料时凭印象编数据或政策文号、不许把范本的内容当成报告内容抄。
+
+规范本身不在 Skill 里另写一份，取的就是 `gongwen/templates/` 里那一份，所以 Skill 和命令行永远不会各说各话。
+
+不用 Claude Code 也一样：`--print-system` 打到 stdout 的那份规范，交给任何能写字的模型都成立。
+
 ## 和原来相比，生成变了什么
 
 - **不再自主联网检索。** 参考资料由 `--refs <file>` 或 `--docs <file>` 传进来。检索那一半整段剪掉了，换来的是纯函数、可复现、不需要任何外部服务。代价是它不会自己去查了，得你把资料给它。
@@ -126,10 +140,12 @@ py tests/run_all.py                      # 一次跑完全部
 想自己看一眼版式：
 
 ```bash
-py preview/build.py fixtures/golden_gw.md --png 版式.png
-py preview/build.py fixtures/golden_gw.md --png 坏的.png --break indent   # 故意改坏，对着看
+py preview/build.py fixtures/print_sample.md --png 版式.png
+py preview/build.py fixtures/print_sample.md --png 坏的.png --break indent   # 故意改坏，对着看
 py preview/build.py --print-frontier                        # 这台机器上找不找得到 Edge
 ```
+
+README 顶上那张图就是第一条命令出的。`--png` 会藏掉页面顶部那行说明，截出来的只有文档本身。
 
 Markdown 渲染用 marked，安全过滤用 DOMPurify，两个库离线 vendored 在 `preview/vendor/`，不走 CDN。
 
