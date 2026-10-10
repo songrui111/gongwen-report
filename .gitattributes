@@ -1,0 +1,11 @@
+# 仓库里一律 LF。
+#
+# 不是洁癖：这个项目的很多判据是**逐字**比出来的（两份提示词快照、派生样本、判据原文），
+# 让换行符随克隆者的机器变，等于在最底下埋一处「在我的机器上是对的」。Windows 上
+# autocrlf 默认就是开的，写死在这里，别人 clone 到 Linux / macOS 得到的是同一串字节。
+* text=auto eol=lf
+
+# 这几个是二进制，别动
+*.png binary
+*.pdf binary
+*.woff2 binary

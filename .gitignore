@@ -1,0 +1,24 @@
+# 真钥匙绝不进仓库。这一条是重点，其他的都是顺手。
+.env
+*.env
+!.env.example
+
+# 检查/生成的产物
+out/
+*_refs.md
+
+# 预览那一层的生成物（量页面时印出来的中间件）
+preview/_*.html
+preview/_*.pdf
+preview/_*.png
+
+# 测试从全绿样本现派生的故障变体 —— 每次都重新生成，不进版本库
+fixtures/_derived/
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,244 @@
+/* 「纸」：公文正文的字族、字号、缩进、落款和印出来那张纸的版式。
+
+   从 ai-chat.html 里搬出来，搬的时候只删了两类东西：**面板外壳**（弹窗、按钮、开关、
+   spinner、免责提示）和**打印时挡住面板的可见性白名单** —— 新页面里除了报告正文没有
+   别的东西可挡，见下面 @media print 里的说明。体例判据一个字没改。
+
+   分工和原来一样：**提示词管主体要素的体例**（标题怎么写、主送机关顶格、每段左空
+   二字、层次序数、成文日期写法，见 gongwen/templates/report_template.md），**这里管
+   印出来那张纸的版式**。每个数字的出处都写在它旁边，改之前回去查标准。
+
+   ---------------------------------------------------------------------------
+   这份 CSS 有一个**刻意的设计**：凡是「标准给的量」都是一个 CSS 变量，落在
+   .report-content 上（不是 .rendered 上，理由见那一段的注释）。tests/test_print.py
+   要证伪这套版式，靠的就是在运行时把这些变量改掉 —— 早先的做法是对这个文件里的
+   字符串做精确替换（连空格都要对上），一旦失配就变成一次静默的 no-op，报出来的错
+   指向完全无关的地方。现在改的是变量值，改不动就是改不动，不会假装成功。
+   --------------------------------------------------------------------------- */
+
+* { box-sizing: border-box; }
+
+/* 屏幕上把它当一张纸看：灰底、白纸、A4 的宽高比。这一层纯装饰，和版式判据无关。 */
+body {
+  margin: 0; padding: 24px 12px; background: #f5f6f8;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+}
+.report-content {
+  width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm 12mm;
+  background: #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 公文正文的字族和字号（标准 5.2.2：如无特殊说明，公文格式各要素一般用 3 号
+   仿宋体字）。屏幕上不照搬 3 号（16pt 太占地方），但**字族一致** —— 仿宋是公文最
+   明显的字面特征，一眼就该看出这是公文格式，而不是普通网页文章。
+   这几个值放在 .report-content 上、而不是 .rendered 上：落款 .doc-sign 是 .rendered
+   的**兄弟节点**，挂在 .rendered 上的字号和变量它继承不到 —— 实测落款会掉回默认字体
+   和 12pt（小四），纸上和 3 号仿宋的正文明显不是一套字。这是 2026-10-10 实打实踩过
+   的一个坑，`--break font` 就是照原样把它做回来，用来证明这条判据真的在判。 */
+.report-content {
+  --doc-font: "仿宋", "FangSong", "仿宋_GB2312", "STFangsong", serif;
+  --body-size: 15px;
+  /* 「左空二字」（标准 7.3.3）的长度**只跟正文字号有关**，所以从 --body-size 算出来，
+     而不是各处写 `text-indent: 2em`：em 是按元素自己的字号折算的，标题字号比正文大，
+     缩进就跟着变大 —— 实测「一、」17px 缩 34px、「（一）」16px 缩 32px、正文 15px
+     缩 30px，三个层次的首字各差 2～4px，屏幕上一眼能看出没对齐。层次序数本身就在
+     正文里，标准要的是它和自然段从同一个位置起排。打印那一段只改 --body-size
+     （3 号 = 16pt），缩进自动跟着走。 */
+  --body-indent: calc(2 * var(--body-size));
+  /* 表格字号默认跟正文一样（标准 5.2.2 的一般规则），同样挂在这一个变量后面 ——
+     `--break table` 把它改成四号，验的是「表格不能比正文小一号」这条判据。 */
+  --table-size: var(--body-size);
+}
+
+.report-content .rendered {
+  font-family: var(--doc-font);
+  font-size: var(--body-size); line-height: 1.9; color: #1a1a1a;
+}
+
+/* 标题（标准 7.3.1）：2 号小标宋体，居中排布。屏幕上缩到 21px，字族照旧 ——
+   小标宋是公文的标题字，缺了它标题和正文就分不出来。
+   标题回行**不做干预**：标准 7.3.1 要「词意完整……排列应当使用梯形或菱形」，那是
+   按词意人工断行的活。试过加 text-wrap: balance 让两行等长（看着更像菱形），结果
+   它把「新能源汽车」断成「智能网联新能源／源汽车产业发展情况的报告」—— 切词比长短
+   不齐更违和，标准里「词意完整」也排在「梯形或菱形」前面。浏览器默认按容器宽度断，
+   至少断在词与词之间。 */
+.report-content .rendered h1 {
+  font-family: "小标宋", "方正小标宋简体", "STZhongsong", "华文中宋", SimSun, serif;
+  font-size: 21px; line-height: 1.5; margin: 12px 0 22px;
+  font-weight: normal; text-align: center;
+}
+
+/* 层次序数的字体（标准 7.3.3）：第一层黑体、第二层楷体、第三、四层仿宋。上面的
+   h1/h2/h3 对应报告里「一、」「（一）」「1.」三级编号；h4 是第四级的「（1）」。
+   **不加 font-weight 的加粗** —— 黑体、楷体本身就有自己的字面，再加粗会把三种字体
+   压成同一种黑，反而不像公文。
+   左空二字（text-indent）也是标准 7.3.3 的要求：层次序数就在正文里，和自然段一样
+   左空二字起排，不是顶格的标题。缩进长度取 --body-indent（正文的两字宽），**不能写
+   2em** —— 那样标题按自己的大字号缩，就和正文的首字错开了。 */
+.report-content .rendered h2 { font-family: "黑体", SimHei, sans-serif; font-size: 17px; margin: 18px 0 8px; font-weight: normal; text-indent: var(--body-indent); }
+.report-content .rendered h3 { font-family: "楷体", "KaiTi", "楷体_GB2312", serif; font-size: 16px; margin: 14px 0 6px; font-weight: normal; text-indent: var(--body-indent); }
+.report-content .rendered h4 { font-family: inherit; font-size: 15px; margin: 12px 0 6px; font-weight: normal; text-indent: var(--body-indent); }
+
+/* 每个自然段左空二字（标准 7.3.3）。例外是 .doc-to 和 .no-indent 两种，都由
+   report.js 的 tagLines() 按文本打标 —— CSS 认不出段落内容。 */
+.report-content .rendered p { margin-bottom: 10px; text-align: justify; text-indent: var(--body-indent); }
+/* 主送机关（标准 7.3.2）：**居左顶格**，末尾全角冒号 —— 它是公文里唯一顶格的一行，
+   缩进两字就不是公文了。 */
+.report-content .rendered p.doc-to { text-indent: 0; }
+/* 这几类行按体例不算「自然段」，不能跟着缩进：表号表题「表 1 …」、需要单位时另起
+   那行「（单位：亿元）」、表注「注：」。不给它们摘掉缩进，公文里就会出现表题缩两格、
+   表注缩两格这种一眼能看到的错位。 */
+.report-content .rendered p.no-indent { text-indent: 0; }
+
+/* 落款（标准 7.3.5.2 不加盖印章的公文）：正文下空一行，发文机关署名在上、成文日期
+   在下。字号字族跟正文一样是 3 号仿宋 —— 落款是正文的一部分，不是页面上的说明文字。
+   具体右空多少由 report.js 的 mountSign() 按标准算（署名右空二字、日期首字比署名首字
+   右移二字），它会把结果写成行内 padding。 */
+.doc-sign { margin: 22px 0 4px; text-align: right;
+            font-family: var(--doc-font); font-size: var(--body-size); }
+.doc-sign p { margin: 0 0 2px; padding-right: var(--body-indent); }
+
+.report-content .rendered ul, .report-content .rendered ol { padding-left: 20px; margin-bottom: 10px; }
+.report-content .rendered li { margin-bottom: 4px; }
+.report-content .rendered strong { font-weight: 600; }
+.report-content .rendered a { color: #4f6bff; }
+.report-content .rendered .table-wrap { overflow-x: auto; margin-bottom: 10px; }
+.report-content .rendered table {
+  border-collapse: separate; border-spacing: 0;
+  width: 100%; font-size: var(--table-size);
+  border: 2px solid #555;
+}
+.report-content .rendered th, .report-content .rendered td {
+  border-right: 1px solid #888; border-bottom: 1px solid #888;
+  padding: 8px 14px; text-align: left;
+}
+.report-content .rendered th:last-child, .report-content .rendered td:last-child { border-right: none; }
+.report-content .rendered tr:last-child th, .report-content .rendered tr:last-child td { border-bottom: none; }
+.report-content .rendered th {
+  background: #eef1f5; font-weight: 700; color: #222;
+  border-bottom: 2px solid #555;
+}
+.report-content .rendered td { background: #fff; color: #333; }
+.report-content .rendered tr:nth-child(even) td { background: #f8f9fb; }
+
+/* ============ 打印样式（导出 PDF）：版式按 GB/T 9704—2012《党政机关公文格式》
+
+   这块是「格式以 GB/T 9704 为准」在浏览器这一侧的落点。每个数字的出处先列在这儿，
+   改之前回去查标准：
+
+     @page 的四边  ——  标准 6.2：A4 纸（210mm×297mm），版心尺寸 156mm×225mm，
+                        上白边 37mm±1mm、左白边 28mm±1mm。于是
+                          左 28mm；右 = 210 - 28 - 156 = 26mm
+                          上 37mm；下 = 297 - 37 - 225 = 35mm
+                        （标准只写死了上白边和下白边由版心高推出来，两个方向各自
+                        闭合，不用另找依据）
+     正文 3 号仿宋  ——  标准 6.2：正文一般用 3 号仿宋体字。3 号 = 16pt。
+     每面 22 行     ——  标准 6.2。版心高 225mm ÷ 22 = 10.2273mm，这就是行距。
+     每行 28 字     ——  标准 6.2。版心宽 156mm ÷ 28 = 5.5714mm 一字 ≈ 15.79pt。
+                        **这一条和「3 号」（16pt）不是严丝合缝的**：16pt × 28 字
+                        = 158mm，比版心宽 2mm。Word 的公文模板靠「字符间距紧缩约
+                        0.13mm」同时满足两条，浏览器没有等价的字距控制，所以这里
+                        **以 3 号为准**（标准原文写死的就是「一般用 3 号」），行数照
+                        22 行精确给。
+     标题 2 号小标宋 ——  标准 7.3.1：2 号小标宋体，居中排布。2 号 = 22pt。
+     层次序数字体   ——  标准 7.3.3：第一层黑体、第二层楷体、第三、四层仿宋。
+     页码           ——  标准 7.5：4 号半角宋体阿拉伯数字，编排在版心**下边缘之下**
+                        （即版心外），数字左右各放一条一字线（形如「— 1 —」），
+                        一字线上距版心下边缘 7mm；单页码居右空一字、双页码居左空
+                        一字。**这一条浏览器做不到，所以这里不写**：CSS 得写在
+                        @page 的 margin box 里（@page { @bottom-right { … } }），
+                        Chrome / Edge 至今不支持 margin box；position: fixed 在
+                        分页媒体里的行为各版本不一，不足为凭。宁可空着，也不写一段
+                        看着像页码、位置字号都不对的东西 —— 要严格合规的页码，把导出
+                        的 PDF 再过一遍 Word 公文模板，或者在打印对话框里勾「页脚」
+                        （位置由浏览器定，不是标准样式）。
+
+   另外这里**不画版头也不画版记**（发文机关标志、红色分隔线、发文字号、签发人、抄送
+   机关、印发机关和印发日期）：这些都是发文机关在正式发文时赋上的，工具不知道，画上
+   去就是编。理由和范围见 gongwen/templates/report_template.md 里公文格式那一节。
+
+   @page 放在顶层而不是塞进 @media print 里：纸张尺寸和页边距只可能作用到这一份报告，
+   不需要再套一层媒体查询。 */
+@page { size: A4; margin: 37mm 26mm 35mm 28mm; }
+
+@media print {
+  body { margin: 0; padding: 0; background: #fff; }
+  /* 页面上除报告正文以外的一切都不印 —— 用**白名单**（只放行 .report-content），
+     不一条条列要藏的东西。原来那份清单列的是面板上的 label / input / textarea，而
+     面板上还有「上传参考文档…」那行提示和附件按钮，它们是 span / div，不在清单里，
+     于是**真的印在了公文第一页的顶部**（2026-10-10 把 PDF 印出来才看见的）。
+     新页面里除了报告只有测试脚手架（探针 #xprobe），同一条白名单一句话盖住。 */
+  body > *:not(.report-content) { display: none !important; }
+  .report-content {
+    width: auto; min-height: 0; padding: 0; margin: 0;
+    box-shadow: none; background: none;
+  }
+  /* 字号（标准 5.2.2：3 号）放在 .report-content 上，落款 .doc-sign 才继承得到；
+     --body-indent 也跟着一起变成 2 × 3 号，缩进和右空都按纸面字号走；
+     --table-size 是从 --body-size 算出来的，一起跟上。 */
+  .report-content { --body-size: 16pt; }
+  .report-content .rendered {
+    font-family: var(--doc-font);
+    font-size: var(--body-size);
+    line-height: 10.2273mm;     /* 版心高 225mm ÷ 22 行 */
+    color: #000;
+  }
+  /* 标题：2 号小标宋，居中。标题行距回到标准行距的 1.5 倍上下 —— 标题是「分行或多行
+     居中排布」，行距太挤读不出「梯形或菱形」那个效果。
+     **小标宋不是 Windows 自带字体**（方正小标宋简体要单独装）：装了就用它，没装就
+     顺着字体栈落到宋体，字号位置都对，只是字面不如小标宋厚重。这一步浏览器没法察觉，
+     所以在这里写明 —— 要完全合规的标题，装一下字体或把 PDF 再过一遍 Word 公文模板。 */
+  .report-content .rendered h1 {
+    font-family: "小标宋", "方正小标宋简体", "STZhongsong", "华文中宋", SimSun, serif;
+    font-size: 22pt; line-height: 1.45;
+    text-align: center; margin: 0 0 10.2273mm;
+  }
+  /* 层次序数字体（标准 7.3.3）。字号一律回到 3 号 —— 公文的层次标题和正文同号，靠
+     字体（黑体／楷体）分出层级，不靠加大字号。
+     **margin 必须归零**：屏幕那条规则给的 18px/8px 会一起漏进打印，把「一、摘要」
+     上下撑出空白，一行就吃掉了两行版心 —— 印出来每面排不满 22 行。层次标题在公文里
+     就是正文的一行，占一格。 */
+  .report-content .rendered h2,
+  .report-content .rendered h3,
+  .report-content .rendered h4 { margin: 0; font-size: 16pt; }
+  .report-content .rendered h2 { font-family: "黑体", SimHei, sans-serif; }
+  .report-content .rendered h3 { font-family: "楷体", "KaiTi", "楷体_GB2312", serif; }
+  .report-content .rendered h4 { font-family: inherit; }
+  /* 公文段落之间**不空行**，靠首行缩进两字分段 —— 这里的行距已经是版心的 22 行网格，
+     段间距再撑开就排不进 22 行了。 */
+  .report-content .rendered p { margin: 0; }
+  /* 表格。**标准整本里关于表格只有一句（第 8 章全文）**：「A4 纸型的表格横排时，页码
+     位置与公文其他页码保持一致，单页码表头在订口一边，双页码表头在切口一边。」两个
+     前提都要看清：
+     ① 说的是「**横排**表格」—— 宽过版心的表旋转 90° 排在版心上，表头因此有订口／
+        切口之分。我们的表格是竖排的，这一条用不上。真遇到排不下的宽表，按标准的意思
+        是**横排**，而现在是让浏览器自己挤压换行（这一处和标准有出入，浏览器打印做不了
+        90° 旋转加逐页翻订口方向，需要有意识地去核）。
+     ② 「页码位置与公文其他页码保持一致」—— 整份报告都还没有页码（标准 7.5），原因
+        见上面的 @page 那一段注释。所以这一条**未实现**，不是「已按标准」。
+     此外，标准对表格的**表号表题、单位行、表注的写法没有规定** —— 提示词里那三条
+     （表号表题在表格上方、「（单位：…）」另起一行、「注：」开头）来自发布稿体例，
+     不要当成标准的要求。
+     版式上做的是：把网页那套立体边框收成公文用的单细线、去掉底纹；跨页时表头在新的一
+     页重复（thead 走 table-header-group），一行不被页缝劈成两半。字号按 5.2.2 回到
+     3 号。 */
+  .report-content .rendered table { border: 1px solid #000; font-size: var(--table-size); }
+  /* 表格字号取 3 号（跟正文一样，标准 5.2.2 的一般规则），不是四号 —— 报告里这几张表
+     都是三四列，3 号排得下。真遇到 3 号排不下的宽表，5.2.2 留了「特定情况可以作适当
+     调整」这个口子，降字号是允许的；但标准给的正解是第 8 章的横排，见上。 */
+  .report-content .rendered thead { display: table-header-group; }
+  .report-content .rendered tr { break-inside: avoid; }
+  .report-content .rendered th,
+  .report-content .rendered td {
+    border-color: #000; padding: 0 2mm; color: #000;
+    background: #fff !important;
+  }
+  .report-content .rendered tr:nth-child(even) td { background: #fff !important; }
+  .report-content .rendered th { font-weight: normal; }
+  .report-content .rendered a { color: #000; text-decoration: underline; }
+  /* 落款（标准 7.3.5.2 不加盖印章的公文）：正文下空一行。右空多少由 mountSign() 算好
+     写成行内 padding（单位是 em，跟着字号走，纸面上自动变成 3 号的倍数），这里只是
+     没有机关名、只剩日期一行时的兜底。 */
+  .doc-sign { margin: 10.2273mm 0 0; text-align: right; }
+  .doc-sign p { margin: 0; padding-right: var(--body-indent); }
+}
