@@ -67,7 +67,19 @@
         width: textWidth(ps[k])
       });
     }
-    return { left: left, sign: sign, errs: window.__errs || [] };
+    const head = {};
+    const hb = content.querySelector('.doc-head .head-banner');
+    head.banner = hb ? hb.textContent : null;
+    head.bannerColor = hb ? getComputedStyle(hb).color : null;
+    head.rule = !!content.querySelector('.doc-head .head-rule');
+
+    const imprint = {};
+    imprint.present = !!content.querySelector('.doc-imprint');
+    const ic = content.querySelector('.doc-imprint .imp-cc');
+    imprint.cc = ic ? ic.textContent : null;
+
+    return { left: left, sign: sign, head: head, imprint: imprint,
+             errs: window.__errs || [] };
   };
 
   window.__reportPreviewDump = function (obj) {

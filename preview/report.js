@@ -7,7 +7,8 @@
 
      await window.__reportPreview.load(markdown, opts, breaks)
 
-   opts   {recipient, org, date}   —— 主送机关、发文机关署名、成文日期（'YYYY-MM-DD'）
+   opts   {recipient, org, date, head} —— 主送机关、发文机关署名、成文日期（'YYYY-MM-DD'）、
+                                           版头/版记字段（见 mountHead / mountImprint）
    breaks {}                       —— 证伪用，见 applyBreaks()。默认全假。
 
    返回的 Promise 在**字体加载完、落款的右空算完**之后才 resolve —— 版式测试量的是
@@ -147,6 +148,126 @@
     }
   }
 
+  /* ============ 版头 ============
+
+     版头（标准 7.2）排在正文之前。和落款一样，字段由调用方给，**不进模型的输出**：
+     发文机关标志、发文字号、签发人这些是发文机关赋上的，模型编就是造假。
+
+     每一项都选填，没填的整行不写。自上而下：
+       份号 / 密级和保密期限 / 紧急程度 —— 顶格在版心左上角，3 号黑体；
+       发文机关标志 —— 居中、红色大字，这就是「红头」；
+       发文字号（有签发人时居左空一字、签发人居右空一字；没有签发人就居中）；
+       红色分隔线 —— 红色、与版心等宽，把版头和主体一刀切开。
+     红色分隔线跟发文字号/签发人绑在一起：没有这两样，说明版头不完整，线也不画 ——
+     和导出 Word 那一路（ai智能体 report_docx.masthead）同一个口径。 */
+  function headFields(head) {
+    head = head || {};
+    return {
+      top: ['copy_no', 'secret', 'urgency'].map(function (k) {
+        return (head[k] || '').trim();
+      }).filter(Boolean),
+      banner: (head.banner || '').trim(),
+      docNo: (head.doc_no || '').trim(),
+      signer: (head.signer || '').trim()
+    };
+  }
+
+  function mountHead(content, head) {
+    const f = headFields(head);
+    const any = f.top.length || f.banner || f.docNo || f.signer;
+    if (!any) return null;   // 一项都没填就不画 —— 不替发文机关编一个空壳版头
+    const old = content.querySelector('.doc-head');
+    if (old) old.remove();
+    const div = document.createElement('div');
+    div.className = 'doc-head';
+    for (const t of f.top) {
+      const p = document.createElement('p');
+      p.className = 'head-top';
+      p.textContent = t;       // textContent：字段是人给的，不进 HTML 解析
+      div.appendChild(p);
+    }
+    if (f.banner) {
+      const p = document.createElement('p');
+      p.className = 'head-banner';
+      p.textContent = f.banner;
+      div.appendChild(p);
+    }
+    if (f.docNo || f.signer) {
+      const row = document.createElement('div');
+      row.className = 'head-no';
+      const no = document.createElement('span');
+      no.className = 'head-doc-no';
+      no.textContent = f.docNo;
+      row.appendChild(no);
+      if (f.signer) {
+        const sg = document.createElement('span');
+        sg.className = 'head-signer';
+        const lab = document.createElement('span');
+        lab.textContent = '签发人：';
+        sg.appendChild(lab);
+        const nm = document.createElement('span');
+        nm.className = 'head-signer-name';
+        nm.textContent = f.signer;
+        sg.appendChild(nm);
+        row.appendChild(sg);
+      }
+      div.appendChild(row);
+      const rule = document.createElement('div');
+      rule.className = 'head-rule';
+      div.appendChild(rule);
+    }
+    // 版头在 .rendered 之前：公文的顺序就是版头 → 主体 → 版记
+    content.insertBefore(div, content.querySelector('.rendered'));
+    return div;
+  }
+
+  /* ============ 版记 ============
+
+     版记（标准 7.4）排在正文（和落款）之后：抄送机关、印发机关和印发日期，
+     首末两条粗线、中间一条细线，都与版心等宽。
+     **不复现「排在最后一面版心底端」这一条**：把一块内容锚到页面底部的定位，浏览器
+     打印做不了 —— 这里是接在落款后面另起一段排，和导出 Word 那一路的口径一致。 */
+  function mountImprint(content, head) {
+    head = head || {};
+    const cc = (head.cc || '').trim();
+    const printer = (head.printer || '').trim();
+    const pdate = (head.print_date || '').trim();
+    if (!(cc || printer || pdate)) return null;
+    const old = content.querySelector('.doc-imprint');
+    if (old) old.remove();
+    const div = document.createElement('div');
+    div.className = 'doc-imprint';
+    const rule = function (thin) {
+      const r = document.createElement('div');
+      r.className = 'imp-rule' + (thin ? ' imp-rule-thin' : '');
+      div.appendChild(r);
+    };
+    rule(false);
+    if (cc) {
+      const p = document.createElement('p');
+      p.className = 'imp-cc';
+      p.textContent = '抄送：' + cc.replace(/。+$/, '') + '。';
+      div.appendChild(p);
+    }
+    if (printer || pdate) {
+      if (cc) rule(true);   // 有抄送行才有「中间那条细线」把它和印发行隔开
+      const row = document.createElement('div');
+      row.className = 'imp-print';
+      const pr = document.createElement('span');
+      pr.className = 'imp-printer';
+      pr.textContent = printer;
+      row.appendChild(pr);
+      const dt = document.createElement('span');
+      dt.className = 'imp-date';
+      dt.textContent = pdate;
+      row.appendChild(dt);
+      div.appendChild(row);
+    }
+    rule(false);
+    content.appendChild(div);
+    return div;
+  }
+
   /* ============ 证伪用的四个旋钮 ============
 
      下面四种「改坏」都是把上面某一条判据的前提去掉，用来看测试到底有没有在判。
@@ -184,7 +305,9 @@
     applyBreaks(content, breaks);
     rendered.innerHTML = renderMarkdown(md);
     tagLines(rendered, opts.recipient);
+    mountHead(content, opts.head);              // 版头在正文之前
     const ps = mountSign(content, signLines(opts));
+    mountImprint(content, opts.head);           // 版记在落款之后
     /* **量落款宽度之前必须等字体就绪**：仿宋没加载完的时候量到的是一份替代字体的
        宽度，而那两个右空值是按宽度算出来的 —— 不等就偶发飘红，而且是那种「重跑一次
        就好了」的飘红，最难查。 */

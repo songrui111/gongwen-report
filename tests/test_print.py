@@ -15,6 +15,10 @@ import build                                              # noqa: E402  （previ
 SAMPLE = os.path.join(FIXTURES, 'print_sample.md')
 OPTS = {'recipient': '某某市科学技术局', 'org': '某某市科学技术研究院',
         'date': '2026-10-10'}
+HEAD = {'copy_no': '0001', 'secret': '秘密★3年', 'urgency': '特急',
+        'banner': '某某市科学技术委员会文件', 'doc_no': '某科发〔2026〕1号',
+        'signer': '张三', 'cc': '某某市发展和改革委员会',
+        'printer': '某某市科学技术委员会办公室', 'print_date': '2026年10月10日'}
 TO_TEXT = OPTS['recipient']      # 主送机关：标题下那一行，要顶格
 ORG_TEXT = OPTS['org']           # 发文机关署名：落款第一行，要右空二字
 
@@ -303,6 +307,27 @@ def main():
             if not ok:
                 print(f'      ✗ {name}：{detail}')
         t(hit, f'{brk} → 「{must}」报红' + ('' if hit else f'；实际报红的是 {red or "一条都没有"}'))
+
+    print('--- 版头/版记：给了字段就画，没给就不画（fail-closed）')
+    md = open(SAMPLE, encoding='utf-8').read()
+
+    def head_dom(with_head):
+        opts = dict(OPTS)
+        if with_head:
+            opts['head'] = HEAD
+        return build.measure(build.build_page(md, opts, {}, probe=True))
+
+    dom = head_dom(True)
+    hd = (dom or {}).get('head') or {}
+    im = (dom or {}).get('imprint') or {}
+    t(hd.get('banner') == HEAD['banner'], f'红头文字 = 给的字段（{hd.get("banner")!r}）')
+    t('255, 0, 0' in (hd.get('bannerColor') or ''), f'红头是红的（{hd.get("bannerColor")!r}）')
+    t(bool(hd.get('rule')), '红色分隔线画了')
+    t(bool(im.get('present')) and '抄送：' in (im.get('cc') or ''), '版记抄送行画了')
+    dom0 = head_dom(False)
+    t(not ((dom0 or {}).get('head') or {}).get('banner'), '没给版头字段：不画红头')
+    t(not ((dom0 or {}).get('imprint') or {}).get('present'), '没给版记字段：不画版记')
+
     return t.ok, t.notes
 
 

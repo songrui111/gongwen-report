@@ -98,6 +98,53 @@ body {
             font-family: var(--doc-font); font-size: var(--body-size); }
 .doc-sign p { margin: 0 0 2px; padding-right: var(--body-indent); }
 
+/* ============ 版头（标准 7.2）============
+
+   和落款一样，字段由调用方给（见 report.js 的 mountHead），每一项选填、没填的整行不写。
+   份号/密级和保密期限/紧急程度是 3 号黑体、顶格在版心左上角；发文机关标志居中、红色、
+   大字 —— **「红头」的红就在这一处**，纯红 FF0000（和导出 Word 那一路同一个值），
+   不是深红也不是橘红；
+   发文字号（有签发人时居左空一字、签发人居右空一字）；红色分隔线红色、与版心等宽。
+   红头的字号没有固定标准（「无固定字号要求，醒目庄重为准」），纸面上取 36pt，屏幕
+   缩到 34px —— 和标题/正文在屏幕上的缩法一个道理（22pt→21px、16pt→15px）。 */
+.doc-head { margin: 0 0 4mm; }
+.doc-head .head-top {
+  font-family: "黑体", SimHei, sans-serif;
+  font-size: var(--body-size); line-height: 1.9; margin: 0;
+  text-indent: 0; text-align: left;
+}
+.doc-head .head-banner {
+  font-family: "小标宋", "方正小标宋简体", "STZhongsong", "华文中宋", SimSun, serif;
+  font-size: 34px; line-height: 1.4; margin: 10px 0 6px;
+  text-align: center; font-weight: normal; color: #ff0000;
+}
+.doc-head .head-no {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--doc-font); font-size: var(--body-size); line-height: 1.9;
+  margin: 0;
+}
+.doc-head .head-doc-no { padding-left: 1em; }   /* 发文字号居左空一字 */
+.doc-head .head-signer { padding-right: 1em; }  /* 签发人居右空一字 */
+.doc-head .head-signer-name { font-family: "楷体", "KaiTi", "楷体_GB2312", serif; }
+.doc-head .head-rule { border-top: 1.5pt solid #ff0000; height: 0; margin: 0.6em 0 0; }
+
+/* ============ 版记（标准 7.4）============
+
+   抄送机关、印发机关和印发日期，接在落款后面。首末两条粗线、中间一条细线，都与版心
+   等宽。**不复现「排在最后一面版心底端」**，见 report.js 的 mountImprint。 */
+.doc-imprint {
+  margin: 6mm 0 0; font-family: var(--doc-font); font-size: var(--body-size);
+  line-height: 1.9;
+}
+.doc-imprint .imp-rule { border-top: 1.5pt solid #000; height: 0; margin: 0; }
+.doc-imprint .imp-rule-thin { border-top: 0.5pt solid #000; }
+.doc-imprint p { margin: 0; text-indent: 0; }
+.doc-imprint .imp-print {
+  display: flex; justify-content: space-between; align-items: baseline; margin: 0;
+}
+.doc-imprint .imp-printer { padding-left: 1em; }
+.doc-imprint .imp-date { padding-right: 1em; }
+
 .report-content .rendered ul, .report-content .rendered ol { padding-left: 20px; margin-bottom: 10px; }
 .report-content .rendered li { margin-bottom: 4px; }
 .report-content .rendered strong { font-weight: 600; }
@@ -158,9 +205,10 @@ body {
                         的 PDF 再过一遍 Word 公文模板，或者在打印对话框里勾「页脚」
                         （位置由浏览器定，不是标准样式）。
 
-   另外这里**不画版头也不画版记**（发文机关标志、红色分隔线、发文字号、签发人、抄送
-   机关、印发机关和印发日期）：这些都是发文机关在正式发文时赋上的，工具不知道，画上
-   去就是编。理由和范围见 gongwen/templates/report_template.md 里公文格式那一节。
+   版头和版记（发文机关标志、红色分隔线、发文字号、签发人、抄送机关、印发机关和印发
+   日期）**由调用方给字段才画**（build.py 的 --banner / --doc-no / --cc 等），没给的
+   整行不写 —— 这些是发文机关在正式发文时赋上的，工具不知道，绝不替它编。理由和范围
+   见 gongwen/templates/report_template.md 里公文格式那一节。
 
    @page 放在顶层而不是塞进 @media print 里：纸张尺寸和页边距只可能作用到这一份报告，
    不需要再套一层媒体查询。 */
@@ -246,4 +294,15 @@ body {
      没有机关名、只剩日期一行时的兜底。 */
   .doc-sign { margin: 10.2273mm 0 0; text-align: right; }
   .doc-sign p { margin: 0; padding-right: var(--body-indent); }
+  /* 版头：字号回到纸面 —— 份号/密级/紧急 3 号黑体、发文机关标志 36pt 红色、
+     发文字号和签发人 3 号仿宋（签发人姓名楷体，屏幕那条规则同样生效）。 */
+  .doc-head { margin: 0; }
+  .doc-head .head-top { font-size: 16pt; line-height: 10.2273mm; }
+  .doc-head .head-banner { font-size: 36pt; line-height: 1.45; margin: 0 0 10.2273mm; }
+  .doc-head .head-no { font-size: 16pt; line-height: 10.2273mm; }
+  .doc-head .head-rule { border-top: 1.5pt solid #ff0000; margin: 0 0 10.2273mm; }
+  /* 版记：3 号仿宋，首末粗线中间细线，接在落款后另起一行。 */
+  .doc-imprint { margin: 10.2273mm 0 0; font-size: 16pt; line-height: 10.2273mm; }
+  .doc-imprint .imp-rule { border-top: 1.5pt solid #000; }
+  .doc-imprint .imp-rule-thin { border-top: 0.5pt solid #000; }
 }

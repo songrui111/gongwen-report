@@ -133,6 +133,15 @@ def main():
     p.add_argument('--to', default='', help='主送机关（决定标题下那一行要不要顶格）')
     p.add_argument('--org', default='', help='发文机关署名')
     p.add_argument('--date', default='', help='成文日期 YYYY-MM-DD，默认本机当天')
+    p.add_argument('--copy-no', default='', help='版头：份号')
+    p.add_argument('--secret', default='', help='版头：密级和保密期限')
+    p.add_argument('--urgency', default='', help='版头：紧急程度')
+    p.add_argument('--banner', default='', help='版头：发文机关标志（红头）')
+    p.add_argument('--doc-no', default='', help='版头：发文字号')
+    p.add_argument('--signer', default='', help='版头：签发人')
+    p.add_argument('--cc', default='', help='版记：抄送机关')
+    p.add_argument('--printer', default='', help='版记：印发机关')
+    p.add_argument('--print-date', default='', help='版记：印发日期')
     p.add_argument('--png', metavar='PATH', help='截一张图')
     p.add_argument('--size', default='900x1300', metavar='WxH',
                    help='--png 的窗口尺寸，默认 900x1300（一页 A4 版心宽 794px）')
@@ -152,7 +161,11 @@ def main():
             md = f.read()
 
     breaks = {k: True for k in a.breaks}
-    page = build_page(md, {'recipient': a.to, 'org': a.org, 'date': a.date}, breaks,
+    head = {'copy_no': a.copy_no, 'secret': a.secret, 'urgency': a.urgency,
+            'banner': a.banner, 'doc_no': a.doc_no, 'signer': a.signer,
+            'cc': a.cc, 'printer': a.printer, 'print_date': a.print_date}
+    page = build_page(md, {'recipient': a.to, 'org': a.org, 'date': a.date,
+                           'head': head}, breaks,
                       capture=bool(a.png))
     print(f'页面 → {page}')
 

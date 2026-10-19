@@ -22,7 +22,8 @@
   按 GB/T 9704—2012 排出来的样子；<code>--pdf 报告.pdf</code> 出可打印 PDF；
   <code>--break indent</code>（或 sign / font / table / paper）故意改坏一处。
 </div>
-<!-- 落款 .doc-sign 必须是 .rendered 的兄弟节点，和它一起挂在 .report-content 底下。
+<!-- 版头 .doc-head、落款 .doc-sign、版记 .doc-imprint 都必须是 .rendered 的兄弟节点，
+     一起挂在 .report-content 底下，顺序是 版头 → 正文(.rendered) → 落款 → 版记。
      字号和字族那对变量挂在 .report-content 上，挪进 .rendered 就继承不到，掉回 12pt。 -->
 <div class="report-content" id="reportContent">
   <div class="rendered" id="reportRendered"></div>
