@@ -72,6 +72,10 @@
     head.banner = hb ? hb.textContent : null;
     head.bannerColor = hb ? getComputedStyle(hb).color : null;
     head.rule = !!content.querySelector('.doc-head .head-rule');
+    const dh = content.querySelector('.doc-head');
+    // 红头上边缘相对 .doc-head 顶（即版心顶）的偏移，px。纸面要 35mm（report_format
+    // 的 BANNER_TOP_MM），屏幕上 35mm = 35 × 96/25.4 px；量这个而不是读 CSS 里的 calc。
+    head.bannerTop = (hb && dh) ? (hb.getBoundingClientRect().top - dh.getBoundingClientRect().top) : null;
 
     const imprint = {};
     imprint.present = !!content.querySelector('.doc-imprint');

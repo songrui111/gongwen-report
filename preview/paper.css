@@ -104,18 +104,27 @@ body {
    份号/密级和保密期限/紧急程度是 3 号黑体、顶格在版心左上角；发文机关标志居中、红色、
    大字 —— **「红头」的红就在这一处**，纯红 FF0000（和导出 Word 那一路同一个值），
    不是深红也不是橘红；
-   发文字号（有签发人时居左空一字、签发人居右空一字）；红色分隔线红色、与版心等宽。
+   发文字号（有签发人时居左空一字、签发人居右空一字；只有发文字号时就居中）；
+   红色分隔线红色、与版心等宽。
    红头的字号没有固定标准（「无固定字号要求，醒目庄重为准」），纸面上取 36pt，屏幕
-   缩到 34px —— 和标题/正文在屏幕上的缩法一个道理（22pt→21px、16pt→15px）。 */
+   缩到 34px —— 和标题/正文在屏幕上的缩法一个道理（22pt→21px、16pt→15px）。
+
+   间距对齐 ai智能体 report_format.py 的常量（屏幕是缩比预览，纸面精确值见
+   @media print）：红头上边缘距版心上边缘 BANNER_TOP_MM=35mm、标志下空二行、发文字号下
+   RULE_GAP_MM=4mm 处是红色分隔线、红线下空二行才到标题。 */
 .doc-head { margin: 0 0 4mm; }
 .doc-head .head-top {
   font-family: "黑体", SimHei, sans-serif;
   font-size: var(--body-size); line-height: 1.9; margin: 0;
   text-indent: 0; text-align: left;
 }
+/* 有红头时，份号/密级/紧急这块补足三行（3 × 正文行高），红头上边缘才落在 35mm ——
+   屏幕上 1.9em 是一行，和纸面 30pt 一行同构，只是缩比；精确值见 @media print。 */
+.doc-head.has-banner .head-top-block { min-height: calc(3 * 1.9 * var(--body-size)); }
 .doc-head .head-banner {
   font-family: "小标宋", "方正小标宋简体", "STZhongsong", "华文中宋", SimSun, serif;
-  font-size: 34px; line-height: 1.4; margin: 10px 0 6px;
+  font-size: 34px; line-height: 1.4;
+  margin: calc(35mm - 3 * 1.9 * var(--body-size)) 0 calc(2 * 1.9 * var(--body-size));
   text-align: center; font-weight: normal; color: #ff0000;
 }
 .doc-head .head-no {
@@ -123,10 +132,14 @@ body {
   font-family: var(--doc-font); font-size: var(--body-size); line-height: 1.9;
   margin: 0;
 }
+/* 只有发文字号、没有签发人时：居中排（7.2.5），不再居左空一字 */
+.doc-head .head-no.no-signer { justify-content: center; }
 .doc-head .head-doc-no { padding-left: 1em; }   /* 发文字号居左空一字 */
+.doc-head .head-no.no-signer .head-doc-no { padding-left: 0; }
 .doc-head .head-signer { padding-right: 1em; }  /* 签发人居右空一字 */
 .doc-head .head-signer-name { font-family: "楷体", "KaiTi", "楷体_GB2312", serif; }
-.doc-head .head-rule { border-top: 1.5pt solid #ff0000; height: 0; margin: 0.6em 0 0; }
+/* 发文字号下 4mm 处是红色分隔线，红线下空二行才到标题（纸面精确值见 @media print）。 */
+.doc-head .head-rule { border-top: 1.5pt solid #ff0000; height: 0; margin: 4mm 0 calc(2 * 1.9 * var(--body-size)); }
 
 /* ============ 版记（标准 7.4）============
 
@@ -294,14 +307,24 @@ body {
      没有机关名、只剩日期一行时的兜底。 */
   .doc-sign { margin: 10.2273mm 0 0; text-align: right; }
   .doc-sign p { margin: 0; padding-right: var(--body-indent); }
-  /* 版头：字号回到纸面 —— 份号/密级/紧急 3 号黑体、发文机关标志 36pt 红色、
-     发文字号和签发人 3 号仿宋（签发人姓名楷体，屏幕那条规则同样生效）。 */
+  /* 版头（间距对齐 ai智能体 report_format.py 的常量）：份号/密级/紧急 3 号黑体，行距用
+     report_format 的固定值 LINE_PT=30pt —— 版头是独立一块，用回它自己的行距才和导出 Word
+     那一路（report_docx.masthead）对上，不跟着正文那张 22 行网格走；发文机关标志 36pt
+     红色，上边缘距版心上边缘 BANNER_TOP_MM=35mm（份号/密级/紧急不满 3 行时补足）；
+     标志下空 BANNER_GAP_LINES=2 行（60pt）；发文字号下 RULE_GAP_MM=4mm 处是红色分隔线
+     RULE_PT=1.5pt；红线下空 TITLE_GAP_LINES=2 行（60pt）才是标题。 */
   .doc-head { margin: 0; }
-  .doc-head .head-top { font-size: 16pt; line-height: 10.2273mm; }
-  .doc-head .head-banner { font-size: 36pt; line-height: 1.45; margin: 0 0 10.2273mm; }
-  .doc-head .head-no { font-size: 16pt; line-height: 10.2273mm; }
-  .doc-head .head-rule { border-top: 1.5pt solid #ff0000; margin: 0 0 10.2273mm; }
-  /* 版记：3 号仿宋，首末粗线中间细线，接在落款后另起一行。 */
+  .doc-head .head-top { font-size: 16pt; line-height: 30pt; margin: 0; }
+  .doc-head.has-banner .head-top-block { min-height: 90pt; }  /* 3 行 × 30pt：不满 3 行也补足 */
+  .doc-head .head-banner {
+    font-size: 36pt; line-height: 1.45;
+    margin-top: calc(35mm - 90pt);   /* 补足 3 行后，余数把红头上边缘顶到 35mm */
+    margin-bottom: 60pt;             /* 红头下空二行（2 × 30pt） */
+  }
+  .doc-head .head-no { font-size: 16pt; line-height: 30pt; }
+  .doc-head .head-rule { border-top: 1.5pt solid #ff0000; height: 0; margin: 4mm 0 60pt; }
+  /* 版记：3 号仿宋，首末粗线 IMPRINT_RULE_PT=1.5pt 中间细线 IMPRINT_THIN_PT=0.5pt，
+     接在落款后另起一行。 */
   .doc-imprint { margin: 10.2273mm 0 0; font-size: 16pt; line-height: 10.2273mm; }
   .doc-imprint .imp-rule { border-top: 1.5pt solid #000; }
   .doc-imprint .imp-rule-thin { border-top: 0.5pt solid #000; }

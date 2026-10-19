@@ -179,13 +179,18 @@
     const old = content.querySelector('.doc-head');
     if (old) old.remove();
     const div = document.createElement('div');
-    div.className = 'doc-head';
+    div.className = 'doc-head' + (f.banner ? ' has-banner' : '');
+    // 份号/密级/紧急收进一个块：有红头时这块**补足三行**（30pt×3），红头上边缘才落在
+    // 35mm —— 见 paper.css 里 .has-banner 那两条。
+    const top = document.createElement('div');
+    top.className = 'head-top-block';
     for (const t of f.top) {
       const p = document.createElement('p');
       p.className = 'head-top';
       p.textContent = t;       // textContent：字段是人给的，不进 HTML 解析
-      div.appendChild(p);
+      top.appendChild(p);
     }
+    div.appendChild(top);
     if (f.banner) {
       const p = document.createElement('p');
       p.className = 'head-banner';
@@ -193,8 +198,9 @@
       div.appendChild(p);
     }
     if (f.docNo || f.signer) {
+      // 有签发人：发文字号居左空一字、签发人居右空一字；只有发文字号：居中（7.2.5）
       const row = document.createElement('div');
-      row.className = 'head-no';
+      row.className = 'head-no' + (f.signer ? '' : ' no-signer');
       const no = document.createElement('span');
       no.className = 'head-doc-no';
       no.textContent = f.docNo;

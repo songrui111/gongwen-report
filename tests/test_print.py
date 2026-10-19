@@ -322,6 +322,9 @@ def main():
     im = (dom or {}).get('imprint') or {}
     t(hd.get('banner') == HEAD['banner'], f'红头文字 = 给的字段（{hd.get("banner")!r}）')
     t('255, 0, 0' in (hd.get('bannerColor') or ''), f'红头是红的（{hd.get("bannerColor")!r}）')
+    banner_top = hd.get('bannerTop')
+    t(banner_top is not None and abs(banner_top - 35 * 96 / 25.4) < 2.0,
+      f'红头上边缘距版心上边缘 35mm（量到 {banner_top}px，要 132.3px）')
     t(bool(hd.get('rule')), '红色分隔线画了')
     t(bool(im.get('present')) and '抄送：' in (im.get('cc') or ''), '版记抄送行画了')
     dom0 = head_dom(False)
