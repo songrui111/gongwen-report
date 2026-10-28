@@ -88,6 +88,35 @@ OpenAI 兼容接口，DeepSeek、硅基流动、本地 Ollama 都能接，设 `D
 
 没配密钥时明确报错退出，退出码 2，并把零密钥那条列在前面。没配密钥时不会发起任何请求，不是发出去等 401。上游出错、连不上、被中断，一律不落盘。密钥一律从环境变量读，不留任何默认值。
 
+### 分阶段：目录 → 正文 → 改稿
+
+一次生成整篇时，模型准备写哪几章、每章写什么，用户看不到，也没法在动笔前补要求。这一版可以先把目录拿出来改：
+
+```bash
+# 1) 出目录（真调模型，要 key）
+py report_check.py --outline --topic "某市低空经济产业" --to "某某市科学技术局" --refs refs.md
+
+# 2) 改 out/report_after_outline.json：标题、每节 title/brief/words、增删排序
+
+# 3) 按改好的目录生成正文
+py report_check.py --gen --topic "某市低空经济产业" --to "某某市科学技术局" \
+  --outline-file out/report_after_outline.json --refs refs.md
+
+# 4) 成稿后只改一节（序号从 0 起，也可以传标题）
+py report_check.py --revise out/report_after.md --section 2 \
+  --instruction "把这一节的数据补具体" --refs refs.md
+
+# 5) 或者按全局要求改全文
+py report_check.py --revise out/report_after.md --all \
+  --instruction "全文语气再克制一点" --refs refs.md
+```
+
+- 零密钥也能用：`--outline --print-system` 把 system + user 打出来，交给宿主模型按 JSON 格式回目录；`--revise … --print-system` 同理。
+- 目录 JSON 是 `out/<tag>_outline.json`，每节有 `title` / `level` / `brief` / `words` 四个字段；`level` 只认 1（一级章节）和 2（二级小节）。
+- 正文提示词会明确写「章节顺序和标题不得增删改」，并把每节的写作说明、目标字数带进去。
+- `--revise --section` 只替换那一节，其余章节原样保留；模型改了标题会被换回原标题。`--all` 才返回整篇。
+- 分阶段模块只依赖标准库，不联网；联网只发生在 `provider.py`。
+
 ## Claude Skill
 
 仓库自带一个 Claude Skill，在 [.claude/skills/gongwen-report/SKILL.md](.claude/skills/gongwen-report/SKILL.md)。用 Claude Code 打开这个目录就自动生效，不用安装。

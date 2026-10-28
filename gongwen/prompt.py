@@ -135,12 +135,15 @@ def report_structure(topic, description='', docs_text=''):
 
 
 def report_system(topic, description='', refs_text='', recipient='', docs_text='',
-                  today=''):
+                  today='', structure_override=None):
     """主题 + 说明 + 主送机关 + 今天 → 最终的 system 串。
 
     today 留空取本机当天；显式给了就用给的。
     主送机关走参数不走模型 —— 模型最容易把它简写，而公文里这一行最不能改。
     没传就不写，不能让模型自己编机关名。
+
+    `structure_override` 给定时用它替掉 `{{structure}}` 槽（分阶段流程里是用户
+    确认过的目录）；不给时行为和原来完全一致。
     """
     today = today_text(today)
     desc_block = f'\n补充说明：{description}' if description else ''
@@ -153,7 +156,10 @@ def report_system(topic, description='', refs_text='', recipient='', docs_text='
         recipient_block = (
             '本次**没有给出主送机关**，这一行**整行不写**，'
             '不要自己编一个机关名。')
-    structure, _ = report_structure(topic, description, docs_text)
+    if structure_override is None:
+        structure, _ = report_structure(topic, description, docs_text)
+    else:
+        structure = structure_override
     system = render_checked(TEMPLATE, {
         'topic': topic, 'description': desc_block,
         'recipient': recipient_block, 'structure': structure, 'today': today,

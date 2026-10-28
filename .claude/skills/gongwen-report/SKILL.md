@@ -74,6 +74,26 @@ py report_check.py --gen --topic "<主题>" --to "<主送机关>"
 默认落在 `out/report_after.md`。**这条路和上面那条是同一套规范**，产物跑完检查器
 也是同一个。拿不准就用零密钥那条。
 
+### 分阶段：先出目录，再写正文
+
+```bash
+py report_check.py --outline --topic "<主题>" --to "<主送机关>" --refs refs.md
+# 改 out/report_after_outline.json（title / level / brief / words）
+py report_check.py --gen --topic "<主题>" --to "<主送机关>" \
+  --outline-file out/report_after_outline.json --refs refs.md
+```
+
+成稿后按节改或改全文：
+
+```bash
+py report_check.py --revise out/report_after.md --section <序号或标题> --instruction "<改什么>"
+py report_check.py --revise out/report_after.md --all --instruction "<全局要求>"
+```
+
+正文提示词会强制按目录的章节和标题写；`--revise --section` 只动那一节，其他章节
+原样保留。没有密钥时，`--outline --print-system` / `--revise … --print-system`
+会把 system + user 打出来，交给宿主模型照做。
+
 ## 别做的事
 
 - 不要为了过检把段落拆成短句、把表格数据删掉 —— 那些数字正是报告要说的东西。

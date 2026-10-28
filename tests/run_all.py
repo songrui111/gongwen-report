@@ -11,7 +11,7 @@ ROOT = os.path.dirname(HERE)
 # 顺序有意：先快后慢。test_print 要开 Edge 印 PDF，最慢，放最后 —— 前面红了的话，
 # 看一眼就知道不用等它了。
 MODULES = ('test_no_secrets', 'test_rules', 'test_prompt', 'test_docformat',
-           'test_generate', 'test_assemble', 'test_print')
+           'test_generate', 'test_outline', 'test_assemble', 'test_print')
 
 VERDICT = {0: '全绿', 1: '有失败项', 2: '没验 / 用法错'}
 
